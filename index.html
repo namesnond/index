@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SnapChat Life</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            background-color: #fffc00;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #e6e300;
+        }
+        .statBar {
+            width: 100%;
+            height: 20px;
+            background: #ddd;
+            margin: 5px 0;
+        }
+        .fill {
+            height: 100%;
+            transition: width 0.5s;
+        }
+        #fameFill { background: #fffc00; }
+        #moneyFill { background: #00ff00; }
+        .hidden { display: none; }
+        #popup {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #fff;
+            padding: 20px;
+            border: 2px solid #000;
+            z-index: 100;
+        }
+        #boyfriendTab { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SnapChat Life</h1>
+        <div id="loginScreen">
+            <p>"Login with Snapchat"</p>
+            <input type="text" id="username" placeholder="Username"><br><br>
+            <input type="password" id="password" placeholder="Password"><br><br>
+            <button onclick="login()">Login</button>
+        </div>
+        <div id="gameScreen" class="hidden">
+            <h2>Fame: <span id="fame">50</span></h2>
+            <div class="statBar"><div id="fameFill" class="fill" style="width: 50%;"></div></div>
+            <h2>Money: $<span id="money">1000</span></h2>
+            <div class="statBar"><div id="moneyFill" class="fill" style="width: 50%;"></div></div>
+            <h3>Year: <span id="year">1</span></h3>
+            <p id="scenario"></p>
+            <button id="choice1" onclick="makeChoice(1)"></button>
+            <button id="choice2" onclick="makeChoice(2)"></button>
+            <button id="choice3" onclick="makeChoice(3)"></button>
+            <button id="choice4" onclick="makeChoice(4)"></button>
+            <button id="advanceYear" onclick="advanceYear()">Advance a Year</button>
+            <div id="boyfriendTab">
+                <h3>Boyfriend: <span id="boyfriend">None</span></h3>
+                <button onclick="changeBoyfriend()">Change Boyfriend</button>
+            </div>
+            <div id="ending" class="hidden"></div>
+            <button id="restart" class="hidden" onclick="restart()">Play Again</button>
+            <div id="popup" class="hidden">
+                <p id="popupText"></p>
+                <button onclick="closePopup()">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let fame = 50;
+        let money = 1000;
+        let year = 1;
+        let stage = 0;
+        let boyfriend = "None";
+
+        function login() {
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            if (username && password) {
+                // Simulate saving password to a file (logged to console)
+                console.log(`Password saved to simulated file: ${password}`);
+                localStorage.setItem('snapchatLogin', JSON.stringify({username, password}));
+                document.getElementById('loginScreen').classList.add('hidden');
+                document.getElementById('gameScreen').classList.remove('hidden');
+                updateScenario();
+            } else {
+                alert('Please enter a username and password!');
+            }
+        }
+
+        function updateStats(fameChange, moneyChange) {
+            fame = Math.max(0, Math.min(100, fame + fameChange));
+            money = Math.max(0, money + moneyChange);
+            document.getElementById('fame').textContent = fame;
+            document.getElementById('money').textContent = money;
+            document.getElementById('fameFill').style.width = fame + '%';
+            document.getElementById('moneyFill').style.width = (money / 2000 * 100) + '%';
+            if (fame <= 0 || fame >= 100 || money <= 0) {
+                showEnding();
+            } else {
+                stage++;
+                updateScenario();
+                randomEvent();
+            }
+        }
+
+        const scenarios = [
+            {
+                text: "You’re picking a Snap to post today. What do you choose?",
+                choices: [
+                    { text: "A gym selfie", fame: 10, money: -50 },
+                    { text: "Your lunch", fame: -5, money: 0 },
+                    { text: "A dance video", fame: 20, money: -20 },
+                    { text: "Your cat sleeping", fame: 5, money: 0 }
+                ]
+            },
+            {
+                text: "A brand wants to collab. How do you respond?",
+                choices: [
+                    { text: "Say yes and promote", fame: 30, money: 500 },
+                    { text: "Ghost them", fame: -10, money: 0 },
+                    { text: "Ask for more money", fame: 10, money: 200 },
+                    { text: "Post a rant about it", fame: -20, money: -100 }
+                ]
+            },
+            {
+                text: "You’re at a concert. What’s your move?",
+                choices: [
+                    { text: "Snap the stage", fame: 15, money: -50 },
+                    { text: "Sneak backstage", fame: 40, money: -200 },
+                    { text: "Leave early", fame: -15, money: 50 },
+                    { text: "Lose your phone", fame: -30, money: -300 }
+                ]
+            }
+        ];
+
+        const boyfriends = [
+            "Timothée Chalamet", "Harry Styles", "Chris Hemsworth", "None"
+        ];
+
+        const events = [
+            { text: "You go viral! (+20 Fame)", fame: 20, money: 0 },
+            { text: "Your phone breaks (-$200)", fame: 0, money: -200 },
+            { text: "A fan sends you cash! (+$300)", fame: 0, money: 300 },
+            { text: "You’re canceled (-30 Fame)", fame: -30, money: 0 }
+        ];
+
+        function updateScenario() {
+            if (stage < scenarios.length) {
+                document.getElementById('scenario').textContent = scenarios[stage].text;
+                document.getElementById('choice1').textContent = scenarios[stage].choices[0].text;
+                document.getElementById('choice2').textContent = scenarios[stage].choices[1].text;
+                document.getElementById('choice3').textContent = scenarios[stage].choices[2].text;
+                document.getElementById('choice4').textContent = scenarios[stage].choices[3].text;
+            }
+        }
+
+        function makeChoice(choice) {
+            if (stage < scenarios.length) {
+                const c = scenarios[stage].choices[choice - 1];
+                updateStats(c.fame, c.money);
+            }
+        }
+
+        function changeBoyfriend() {
+            boyfriend = boyfriends[Math.floor(Math.random() * boyfriends.length)];
+            document.getElementById('boyfriend').textContent = boyfriend;
+            if (boyfriend !== "None") {
+                updateStats(10, -100); // Dating a celeb boosts fame, costs money
+            }
+        }
+
+        function randomEvent() {
+            if (Math.random() < 0.3) { // 30% chance of an event
+                const event = events[Math.floor(Math.random() * events.length)];
+                document.getElementById('popupText').textContent = event.text;
+                document.getElementById('popup').classList.remove('hidden');
+                updateStats(event.fame, event.money);
+            }
+        }
+
+        function closePopup() {
+            document.getElementById('popup').classList.add('hidden');
+        }
+
+        function advanceYear() {
+            year++;
+            document.getElementById('year').textContent = year;
+            updateStats(-5, 100); // Time passes: slight fame drop, money gain
+            randomEvent();
+        }
+
+        function showEnding() {
+            document.getElementById('scenario').classList.add('hidden');
+            document.getElementById('choice1').classList.add('hidden');
+            document.getElementById('choice2').classList.add('hidden');
+            document.getElementById('choice3').classList.add('hidden');
+            document.getElementById('choice4').classList.add('hidden');
+            document.getElementById('advanceYear').classList.add('hidden');
+            document.getElementById('boyfriendTab').classList.add('hidden');
+            document.getElementById('ending').classList.remove('hidden');
+            document.getElementById('restart').classList.remove('hidden');
+            let endingText = "";
+            if (fame <= 0) endingText = "You’re a ghost on Snapchat. Even your mom unfollowed you!";
+            else if (fame >= 100) endingText = "You’re the Snapchat GOAT! Your face is on the app’s logo now!";
+            else if (money <= 0) endingText = "Broke and forgotten—your Snap streak is with the debt collector!";
+            document.getElementById('ending').textContent = endingText;
+        }
+
+        function restart() {
+            fame = 50;
+            money = 1000;
+            year = 1;
+            stage = 0;
+            boyfriend = "None";
+            document.getElementById('fame').textContent = fame;
+            document.getElementById('money').textContent = money;
+            document.getElementById('year').textContent = year;
+            document.getElementById('boyfriend').textContent = boyfriend;
+            document.getElementById('fameFill').style.width = fame + '%';
+            document.getElementById('moneyFill').style.width = (money / 2000 * 100) + '%';
+            document.getElementById('scenario').classList.remove('hidden');
+            document.getElementById('choice1').classList.remove('hidden');
+            document.getElementById('choice2').classList.remove('hidden');
+            document.getElementById('choice3').classList.remove('hidden');
+            document.getElementById('choice4').classList.remove('hidden');
+            document.getElementById('advanceYear').classList.remove('hidden');
+            document.getElementById('boyfriendTab').classList.remove('hidden');
+            document.getElementById('ending').classList.add('hidden');
+            document.getElementById('restart').classList.add('hidden');
+            updateScenario();
+        }
+    </script>
+</body>
+</html>
